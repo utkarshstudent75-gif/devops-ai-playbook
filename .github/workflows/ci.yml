@@ -81,12 +81,17 @@ jobs:
           ACCOUNT=${{ secrets.AWS_ACCOUNT_ID }}
           REGION=${{ secrets.AWS_REGION }}
 
+          if [[ ! "$ACCOUNT" =~ ^[0-9]{12}$ ]]; then
+            echo "AWS_ACCOUNT_ID must be set to a 12-digit AWS account ID"
+            exit 1
+          fi
+
           for SERVICE in auth gateway orders order-service product-service user-service; do
             MANIFEST="gitops/k8s/backend/${SERVICE}.yml"
-            sed -i "s|${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${SERVICE}:.*|${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${SERVICE}:${NEW_TAG}|g" $MANIFEST
+            sed -E -i "s#(<AWS_ACCOUNT_ID>|[0-9]{12})\.dkr\.ecr\.${REGION}\.amazonaws\.com/${SERVICE}:[^[:space:]]+#${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${SERVICE}:${NEW_TAG}#g" "$MANIFEST"
           done
 
-          sed -i "s|${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/frontend:.*|${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/frontend:${NEW_TAG}|g" gitops/k8s/frontend/deployment.yml
+          sed -E -i "s#(<AWS_ACCOUNT_ID>|[0-9]{12})\.dkr\.ecr\.${REGION}\.amazonaws\.com/frontend:[^[:space:]]+#${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/frontend:${NEW_TAG}#g" gitops/k8s/frontend/deployment.yml
 
       - name: Commit and push updated manifests
         run: |
